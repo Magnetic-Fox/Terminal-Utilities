@@ -13,7 +13,7 @@ You'll need to install `readchar` library for these codes to work. This can be i
 
 Well, just dive in the manual of VT100 terminal to get the main goal of using such a device and then You'll probably get what's going on in these codes. ;) For short.
 
-`ansi.py` contains some of the most useful procedures for controlling ANSI-like terminals, such as: `setFgColor`, `setBgColor`, `setCurPos`, `reset`, `clear`, `setBold`, `setReverse`, `setNoWrapAround`, etc. If You ever programmed in Turbo Pascal using CRT unit, You'll probably know what's going on. :)
+`ansi.py` contains some of the most useful procedures for controlling ANSI-like terminals, such as: `setFgColorT`, `setBgColorT`, `setCurPos`, `reset`, `clear`, `setBold`, `setReverse`, `setNoWrapAround`, etc. If You ever programmed in Turbo Pascal using CRT unit, You'll probably know what's going on. :)
 
 `color.py` contains classic color definition. Useful for procedures from above code.
 
