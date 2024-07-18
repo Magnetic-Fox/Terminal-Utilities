@@ -2,7 +2,7 @@
 
 # Simple terminal list utility
 #
-# by Magnetic-Fox, 03-05.07.2024
+# by Magnetic-Fox, 03-05.07.2024, 18.07.2024
 #
 # (C)2024 Bartłomiej "Magnetic-Fox" Węgrzyn!
 
@@ -11,19 +11,36 @@ import ansi
 
 # List selector utility
 # Arguments are as follows: list variable, x position of screen, y position of screen, screen width, screen height,
-# set margins, margin size, function to invoke on selection change, set returning coordinates of left side of the selection
+# set margins, margin size, function to invoke on selection change, set returning coordinates of left side of the selection,
+# start index (selected element)
 
 # IMPORTANT: Position variables starts from 1 (not 0!)
-def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, onSelection=None, leftSideCoords=True):
+def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, onSelection=None, leftSideCoords=True, startIndex=0):
 	s_width-=pos_x-1
 	s_height-=pos_y-1
 	maxStrWidth=0
-	selection=0
+	selection=startIndex
 	displayPos=0
 	adds=0
 	redrawAll=True
 	reset=False
 	allNone=True
+	list=list[:]
+
+	if (selection<len(list)) and (selection>=0):
+		while list[selection]==None:
+			selection+=1
+			if selection>=len(list):
+				selection=startIndex
+				while list[selection]==None:
+					selection-=1
+					if selection<0:
+						selection=0
+						break
+				break
+	else:
+		selection=0
+
 	if(list!=None) and (len(list)>0):
 		listSize=len(list)
 		for x in range(len(list)):
@@ -34,8 +51,12 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 			else:
 				allNone=False
 				if reset:
-					displayPos=x
+					#displayPos=x
 					selection=x
+					if selection>s_height-1:
+						displayPos=selection
+						if displayPos+s_height>len(list):
+							displayPos=len(list)-s_height
 					reset=False
 			if addMargins:
 				list[x]=" "*marginSize+list[x]+" "*marginSize
