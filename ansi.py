@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Very simple (most used) ANSI escape codes implementation
-# by Magnetic-Fox, 28.04.2024, 02-04.05.2024, 30.06.2024, 05.07.2024, 18.07.2024
+# by Magnetic-Fox, 28.04.2024, 02-04.05.2024, 30.06.2024, 05-20.07.2024
 #
 # (C)2024 Bartłomiej "Magnetic-Fox" Węgrzyn!
 
@@ -91,11 +91,11 @@ def setFgColorT(color, ret=False):
 	if(color>7):
 		if(hyperColors):
 			color-=8
-			part=setBold(ret) # This does the trick
+			part=setBold(ret)	# This does the trick
 		else:
-			color+=52         # + 60 - 8
+			color+=52		# + 60 - 8
 	elif(hyperColors):
-		part=setNoBold()
+		part=setNoBold(ret)
 	if part==None:
 		return setFgColor(color,ret)
 	else:
@@ -106,9 +106,9 @@ def setBgColorT(color, ret=False):
 	global hyperColors
 	if(color>7):
 		if(hyperColors):
-			color-=8    # There aren't any trick for that, unfortunatelly
+			color-=8	# There aren't any trick for that, unfortunatelly
 		else:
-			color+=52 # + 60 - 8
+			color+=52	# + 60 - 8
 	return setBgColor(color,ret)
 
 # Set cursor position
