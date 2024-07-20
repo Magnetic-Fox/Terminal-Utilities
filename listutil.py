@@ -2,7 +2,7 @@
 
 # Simple terminal list utility
 #
-# by Magnetic-Fox, 03-05.07.2024, 18.07.2024
+# by Magnetic-Fox, 03-05.07.2024, 18-21.07.2024
 #
 # (C)2024 Bartłomiej "Magnetic-Fox" Węgrzyn!
 
@@ -222,7 +222,7 @@ def test(in1,in2,in3):
 	return
 
 # Test function
-def makeTest():
+def makeTest(width=80, height=24):
 	# Prepare test
 	list=["1",None,None,"2"]
 
@@ -249,7 +249,7 @@ def makeTest():
 	print("ID,X,Y")
 
 	# Invoke list selector and store selection in "chosen" variable
-	chosen=choice(list,1,1,80,24,onSelection=test)
+	chosen=choice(list,1,1,width,height,onSelection=test)
 
 	# Display selection ID
 	ansi.clear()
