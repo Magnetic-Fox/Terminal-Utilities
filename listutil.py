@@ -2,7 +2,7 @@
 
 # Simple terminal list utility
 #
-# by Magnetic-Fox, 03-05.07.2024, 18-21.07.2024, 12-13.11.2024
+# by Magnetic-Fox, 03-05.07.2024, 18-21.07.2024, 12-14.11.2024
 #
 # (C)2024 Bartłomiej "Magnetic-Fox" Węgrzyn!
 
@@ -16,7 +16,7 @@ import sys
 # start index (selected element)
 
 # IMPORTANT: Position variables starts from 1 (not 0!)
-def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, onSelection=None, leftSideCoords=True, startIndex=0):
+def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, onSelection=None, leftSideCoords=True, placeCursorAtStart=False, doNotExceed=False, startIndex=0):
 	# Define temporary variables and initialize them
 	s_width-=pos_x-1
 	s_height-=pos_y-1
@@ -106,8 +106,6 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 								ansi.setCurPos(pos_x,pos_y+x)
 							if x==s_height-1:
 								print(" "*maxStrWidth,end="")
-#								ansi.setCurPos(pos_x,pos_y+x-1)
-#								print("")
 							else:
 								print(" "*maxStrWidth)
 							continue
@@ -119,8 +117,6 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 							ansi.setCurPos(pos_x,pos_y+x)
 						if x==s_height-1:
 							print(list[displayPos+x]+" "*(maxStrWidth-len(list[displayPos+x])),end="")
-#							ansi.setCurPos(pos_x,pos_y+x-1)
-#							print("")
 						else:
 							print(list[displayPos+x]+" "*(maxStrWidth-len(list[displayPos+x])))
 						if displayPos+x==selection:
@@ -131,9 +127,9 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 								ansi.setCurPos(pos_x,pos_y+x+1)
 				# Set redraw all task as done
 				redrawAll=False
+				# Set cursor position after drawing the list
+				ansi.setCurPos(pos_x+((maxStrWidth-(1 if doNotExceed else 0)) if not placeCursorAtStart else 0),curPos)
 
-			# Set cursor position after drawing the list
-			ansi.setCurPos(pos_x+maxStrWidth,curPos)
 			# Flush standard output (which is VERY IMPORTANT!)
 			sys.stdout.flush()
 			# Read character from the standard input
@@ -194,26 +190,15 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 					if(oldSelection<listSize) and (s_height>1):
 						ansi.setNoReverse()
 						ansi.setCurPos(pos_x,pos_y+(oldSelection-displayPos))
-#						if pos_y+(oldSelection-displayPos)>=s_height:
 						print(list[oldSelection]+" "*(maxStrWidth-len(list[oldSelection])),end="")
-#							ansi.setCurPos(pos_x,s_height-2)
-#							print("")
-#						else:
-#							print(list[oldSelection]+" "*(maxStrWidth-len(list[oldSelection])),end="")
 					if(selection-displayPos>=0):
 						ansi.setCurPos(pos_x,pos_y+(selection-displayPos))
 						ansi.setReverse()
-						curPos=pos_y+(selection-displayPos)
-#						if pos_y+(selection-displayPos)>=s_height:
 						print(list[selection]+" "*(maxStrWidth-len(list[selection])),end="")
-#							ansi.setCurPos(pos_x,s_height-2)
-#							print("")
-#						else:
-#							print(list[selection]+" "*(maxStrWidth-len(list[selection])),end="")
 						ansi.setNoReverse()
 						if(onSelection!=None):
 							onSelection(selection,pos_x+adds,pos_y+(selection-displayPos))
-							ansi.setCurPos(pos_x,pos_y+(selection-displayPos)+1)
+							ansi.setCurPos(pos_x+((maxStrWidth-(1 if doNotExceed else 0)) if not placeCursorAtStart else 0),pos_y+(selection-displayPos))
 
 			# Go down on the list (one element, 16 elements, get end of the list)
 			elif(inp==readchar.key.DOWN) or (inp==readchar.key.PAGE_DOWN) or (inp==readchar.key.END):
@@ -270,26 +255,15 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 					if(oldSelection>=0) and (pos_y+(oldSelection-displayPos)>=pos_y):
 						ansi.setNoReverse()
 						ansi.setCurPos(pos_x,pos_y+(oldSelection-displayPos))
-#						if pos_y+(oldSelection-displayPos)==s_height:
 						print(list[oldSelection]+" "*(maxStrWidth-len(list[oldSelection])),end="")
-#							ansi.setCurPos(pos_x,s_height-1)
-#							print("")
-#						else:
-#							print(list[oldSelection]+" "*(maxStrWidth-len(list[oldSelection])),end="")
 					if(selection-displayPos<s_height):
 						ansi.setCurPos(pos_x,pos_y+(selection-displayPos))
 						ansi.setReverse()
-						curPos=pos_y+(selection-displayPos)
-#						if pos_y+(selection-displayPos):
 						print(list[selection]+" "*(maxStrWidth-len(list[selection])),end="")
-#							ansi.setCurPos(pos_x,s_height-1)
-#							print("")
-#						else:
-#							print(list[selection]+" "*(maxStrWidth-len(list[selection])),end="")
 						ansi.setNoReverse()
 						if(onSelection!=None):
 							onSelection(selection,pos_x+adds,pos_y+(selection-displayPos))
-							ansi.setCurPos(pos_x,pos_y+(selection-displayPos)+1)
+							ansi.setCurPos(pos_x+((maxStrWidth-(1 if doNotExceed else 0)) if not placeCursorAtStart else 0),pos_y+(selection-displayPos))
 
 			# Break list selector (selection index is already set)
 			elif(inp==readchar.key.ENTER):
