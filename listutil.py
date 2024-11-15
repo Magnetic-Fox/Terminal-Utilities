@@ -1,22 +1,27 @@
 #!/usr/bin/env python3
 
-# Simple terminal list utility
+# Simple terminal list selector utility
 #
-# by Magnetic-Fox, 03-05.07.2024, 18-21.07.2024, 12-14.11.2024
+# by Magnetic-Fox, 03-05.07.2024, 18-21.07.2024, 12-15.11.2024
 #
 # (C)2024 Bartłomiej "Magnetic-Fox" Węgrzyn!
 
+# Imports...
 import readchar
 import ansi
 import sys
 
-# List selector utility
-# Arguments are as follows: list variable, x position of screen, y position of screen, screen width, screen height,
-# set margins, margin size, function to invoke on selection change, set returning coordinates of left side of the selection,
-# start index (selected element)
-
-# IMPORTANT: Position variables starts from 1 (not 0!)
-def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, onSelection=None, leftSideCoords=True, placeCursorAtStart=False, doNotExceed=False, startIndex=0):
+# LIST SELECTOR UTILITY
+#
+# ARGUMENTS ARE AS FOLLOWS: list variable (list), x position of list on screen (pos_x),
+# y position of list on screen (pos_y), screen width (s_width), screen height (s_height),
+# set adding margins (addMargins), margin size (marginSize), function to invoke on selection change (onSelection),
+# set passing and/or returning coordinates of left side of the selection (leftSideCoordinates),
+# set placing cursor at the left side of selection (placeCursorAtStart), cursor setting correction (cursorCorrection),
+# selected element index (startIndex), set returning coordinates too (returnCoordinatesToo).
+#
+# IMPORTANT: Variables for position on screen starts from 1 (not 0!)
+def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, onSelection=None, leftSideCoordinates=True, placeCursorAtStart=False, cursorCorrection=0, startIndex=0, returnCoordinatesToo=False):
 	# Define temporary variables and initialize them
 	s_width-=pos_x-1
 	s_height-=pos_y-1
@@ -28,7 +33,6 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 	reset=False
 	allNone=True
 	list=list[:]
-	curPos=pos_y
 
 	# Set the real start index on list if selection points to the None
 	if (selection<len(list)) and (selection>=0):
@@ -82,16 +86,16 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 				list[x]=list[x][0:s_width-subt]
 				list[x]+="..."+" "*marginSize
 
-		# Terminate selector and return error on None-only list
+		# Set to terminate selector and return error (None-only list)
 		if allNone:
-			return -1
+			selection=-1
 
 		# Set how much to add to the output coordinates in "on selection" event
-		if not leftSideCoords:
+		if not leftSideCoordinates:
 			adds=maxStrWidth-1
 
 		# Main list selector part
-		while True:
+		while not allNone:
 			# Full list redraw event
 			if redrawAll:
 				# Set initial position
@@ -110,8 +114,6 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 								print(" "*maxStrWidth)
 							continue
 						if displayPos+x==selection:
-							# Store cursor position
-							curPos=pos_y+x
 							ansi.setReverse()
 						if(pos_x>1):
 							ansi.setCurPos(pos_x,pos_y+x)
@@ -128,7 +130,7 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 				# Set redraw all task as done
 				redrawAll=False
 				# Set cursor position after drawing the list
-				ansi.setCurPos(pos_x+((maxStrWidth-(1 if doNotExceed else 0)) if not placeCursorAtStart else 0),curPos)
+				ansi.setCurPos(pos_x+(maxStrWidth if not placeCursorAtStart else 0)+cursorCorrection,pos_y+selection-displayPos)
 
 			# Flush standard output (which is VERY IMPORTANT!)
 			sys.stdout.flush()
@@ -198,7 +200,7 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 						ansi.setNoReverse()
 						if(onSelection!=None):
 							onSelection(selection,pos_x+adds,pos_y+(selection-displayPos))
-							ansi.setCurPos(pos_x+((maxStrWidth-(1 if doNotExceed else 0)) if not placeCursorAtStart else 0),pos_y+(selection-displayPos))
+							ansi.setCurPos(pos_x+(maxStrWidth if not placeCursorAtStart else 0)+cursorCorrection,pos_y+(selection-displayPos))
 
 			# Go down on the list (one element, 16 elements, get end of the list)
 			elif(inp==readchar.key.DOWN) or (inp==readchar.key.PAGE_DOWN) or (inp==readchar.key.END):
@@ -263,17 +265,22 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 						ansi.setNoReverse()
 						if(onSelection!=None):
 							onSelection(selection,pos_x+adds,pos_y+(selection-displayPos))
-							ansi.setCurPos(pos_x+((maxStrWidth-(1 if doNotExceed else 0)) if not placeCursorAtStart else 0),pos_y+(selection-displayPos))
+							ansi.setCurPos(pos_x+(maxStrWidth if not placeCursorAtStart else 0)+cursorCorrection,pos_y+(selection-displayPos))
 
 			# Break list selector (selection index is already set)
 			elif(inp==readchar.key.ENTER):
 				break
 
-	# Set error if list is None-only or has no elements
+	# Set error if list has no elements or does not exist (got None)
 	else:
 		selection=-1
 
-	# Return selection (or error)
+	# Return selection or error (and coordinates, if chosen to)
+	if returnCoordinatesToo:
+		if selection<0:
+			# Return 0, 0 coordinates (wrong, in fact) on error
+			return selection, 0, 0
+		return selection, pos_x+adds, pos_y+selection-displayPos
 	return selection
 
 
@@ -319,12 +326,14 @@ def makeTest(width=80, height=24):
 	print("ID,X,Y")
 
 	# Invoke list selector and store selection in "chosen" variable
-	chosen=choice(list,1,1,width,height,onSelection=test)
+	chosen,rx,ry=choice(list,1,1,width,height,onSelection=test,returnCoordinatesToo=True)
 
 	# Display selection ID
 	ansi.clear()
 	ansi.setCurPos(1,1)
-	print("Chosen ID: "+str(chosen))
+	print("ID:   "+str(chosen))
+	print("X:    "+str(rx))
+	print("Y:    "+str(ry))
 
 	# Set wrap around, as probably was before running test
 	ansi.setWrapAround()
