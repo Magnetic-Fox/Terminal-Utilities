@@ -15,13 +15,15 @@ import sys
 #
 # ARGUMENTS ARE AS FOLLOWS: list variable (list), x position of list on screen (pos_x),
 # y position of list on screen (pos_y), screen width (s_width), screen height (s_height),
-# set adding margins (addMargins), margin size (marginSize), function to invoke on selection change (onSelection),
+# set adding margins (addMargins), margin size (marginSize), character to change on the left side of the element (leftCharMod),
+# character to change on the right side of the element (rightCharMod), function to invoke on selection change (onSelection),
 # set passing and/or returning coordinates of left side of the selection (leftSideCoordinates),
 # set placing cursor at the left side of selection (placeCursorAtStart), cursor setting correction (cursorCorrection),
 # selected element index (startIndex), set returning coordinates too (returnCoordinatesToo).
+# ONLY FIRST FIVE PARAMETERS ARE REQUIRED (list, pos_x, pos_y, s_width and s_height), OTHERS ARE OPTIONAL.
 #
 # IMPORTANT: Variables for position on screen starts from 1 (not 0!)
-def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, onSelection=None, leftSideCoordinates=True, placeCursorAtStart=False, cursorCorrection=0, startIndex=0, returnCoordinatesToo=False):
+def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, leftCharMod='', rightCharMod='', onSelection=None, leftSideCoordinates=True, placeCursorAtStart=False, cursorCorrection=0, startIndex=0, returnCoordinatesToo=False):
 	# Define temporary variables and initialize them
 	s_width-=pos_x-1
 	s_height-=pos_y-1
@@ -32,10 +34,22 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 	redrawAll=True
 	reset=False
 	allNone=True
-	list=list[:]
 
-	# Set the real start index on list if selection points to the None
-	if (selection<len(list)) and (selection>=0):
+	# Test if list is not None
+	if list!=None:
+		list=list[:]
+
+	# Test if leftCharMod and rightCharMod are one character long strings
+	if (leftCharMod!=None and len(leftCharMod)>1) or (rightCharMod!=None and len(rightCharMod)>1):
+		selection=-1
+		list=None
+
+	# Let's shorten it
+	lcm=(leftCharMod!=None) and (len(leftCharMod)==1)
+	rcm=(rightCharMod!=None) and (len(rightCharMod)==1)
+
+	# Set the real start index on existing list if selection points to the None
+	if (list!=None) and (selection<len(list)) and (selection>=0):
 		while list[selection]==None:
 			selection+=1
 			if selection>=len(list):
@@ -117,10 +131,34 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 							ansi.setReverse()
 						if(pos_x>1):
 							ansi.setCurPos(pos_x,pos_y+x)
-						if x==s_height-1:
-							print(list[displayPos+x]+" "*(maxStrWidth-len(list[displayPos+x])),end="")
+						# If modifying element's first character
+						if lcm:
+							# Modify element's first character
+							print(leftCharMod,end="")
+							if rcm and (maxStrWidth-len(list[displayPos+x])==0):
+								# Cut first character and modify element's last character
+								# immediately if string length is equal to the maximum width
+								print(list[displayPos+x][1:-1],end="")
+							else:
+								# Just cut first character
+								print(list[displayPos+x][1:],end="")
+						# If not modifying element's first character
 						else:
-							print(list[displayPos+x]+" "*(maxStrWidth-len(list[displayPos+x])))
+							if rcm and (maxStrWidth-len(list[displayPos+x])==0):
+								# Modify element's last character immediately if string length
+								# is equal to the maximum width
+								print(list[displayPos+x][:-1],end="")
+							else:
+								# Print element normally
+								print(list[displayPos+x],end="")
+						# Fill element's empty part with spaces
+						print(" "*(maxStrWidth-len(list[displayPos+x])-(1 if rcm else 0)),end="")
+						# If modifying element's last character
+						if rcm:
+							print(rightCharMod,end="")
+						if x!=s_height-1:
+							# Go to the next line
+							print("")
 						if displayPos+x==selection:
 							ansi.setNoReverse()
 							# Invoke "on selection" event
@@ -192,11 +230,53 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 					if(oldSelection<listSize) and (s_height>1):
 						ansi.setNoReverse()
 						ansi.setCurPos(pos_x,pos_y+(oldSelection-displayPos))
-						print(list[oldSelection]+" "*(maxStrWidth-len(list[oldSelection])),end="")
+						# If modifying element's first character
+						if lcm:
+							print(leftCharMod,end="")
+							if rcm and (maxStrWidth-len(list[oldSelection])==0):
+								# Cut first and last character (like before)
+								print(list[oldSelection][1:-1],end="")
+							else:
+								# Cut first character only
+								print(list[oldSelection][1:],end="")
+						# If not modifying element's first character
+						else:
+							if rcm and (maxStrWidth-len(list[oldSelection])==0):
+								# Cut last character only (like before)
+								print(list[oldSelection][:-1],end="")
+							else:
+								# Print normally
+								print(list[oldSelection],end="")
+						# Fill with spaces (like before)
+						print(" "*(maxStrWidth-len(list[oldSelection])-(1 if rcm else 0)),end="")
+						if rcm:
+							# Change element's last character
+							print(rightCharMod,end="")
 					if(selection-displayPos>=0):
 						ansi.setCurPos(pos_x,pos_y+(selection-displayPos))
 						ansi.setReverse()
-						print(list[selection]+" "*(maxStrWidth-len(list[selection])),end="")
+						# If modifying element's first character
+						if lcm:
+							print(leftCharMod,end="")
+							if rcm and (maxStrWidth-len(list[selection])==0):
+								# Cut first and last character (like before)
+								print(list[selection][1:-1],end="")
+							else:
+								# Cut first character only (like before)
+								print(list[selection][1:],end="")
+						# If not modifying element's first character
+						else:
+							if rcm and (maxStrWidth-len(list[selection])==0):
+								# Cut last character (like before)
+								print(list[selection][:-1],end="")
+							else:
+								# Print normally
+								print(list[selection],end="")
+						# Fill with spaces (like before)
+						print(" "*(maxStrWidth-len(list[selection])-(1 if rcm else 0)),end="")
+						if rcm:
+							# Change element's last character
+							print(rightCharMod,end="")
 						ansi.setNoReverse()
 						if(onSelection!=None):
 							onSelection(selection,pos_x+adds,pos_y+(selection-displayPos))
@@ -257,11 +337,53 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 					if(oldSelection>=0) and (pos_y+(oldSelection-displayPos)>=pos_y):
 						ansi.setNoReverse()
 						ansi.setCurPos(pos_x,pos_y+(oldSelection-displayPos))
-						print(list[oldSelection]+" "*(maxStrWidth-len(list[oldSelection])),end="")
+						# If modifying element's first character
+						if lcm:
+							print(leftCharMod,end="")
+							if rcm and (maxStrWidth-len(list[oldSelection])==0):
+								# Cut first and last character (like before)
+								print(list[oldSelection][1:-1],end="")
+							else:
+								# Cut first character only (like before)
+								print(list[oldSelection][1:],end="")
+						# If not modifying element's first character
+						else:
+							if rcm and (maxStrWidth-len(list[oldSelection])==0):
+								# Cut last character (like before)
+								print(list[oldSelection][:-1],end="")
+							else:
+								# Print normally
+								print(list[oldSelection],end="")
+						# Fill with spaces (like before)
+						print(" "*(maxStrWidth-len(list[oldSelection])-(1 if rcm else 0)),end="")
+						if rcm:
+							# Modify element's last character
+							print(rightCharMod,end="")
 					if(selection-displayPos<s_height):
 						ansi.setCurPos(pos_x,pos_y+(selection-displayPos))
 						ansi.setReverse()
-						print(list[selection]+" "*(maxStrWidth-len(list[selection])),end="")
+						# If modifying element's first character
+						if lcm:
+							print(leftCharMod,end="")
+							if rcm and (maxStrWidth-len(list[selection])==0):
+								# Cut first and last character (like before)
+								print(list[selection][1:-1],end="")
+							else:
+								# Cut first character only (like before)
+								print(list[selection][1:],end="")
+						# If not modifying element's first character
+						else:
+							if rcm and (maxStrWidth-len(list[selection])==0):
+								# Cut last character (like before)
+								print(list[selection][:-1],end="")
+							else:
+								# Print normally
+								print(list[selection],end="")
+						# Fill with spaces (like before)
+						print(" "*(maxStrWidth-len(list[selection])-(1 if rcm else 0)),end="")
+						if rcm:
+							# Modify element's last character
+							print(rightCharMod,end="")
 						ansi.setNoReverse()
 						if(onSelection!=None):
 							onSelection(selection,pos_x+adds,pos_y+(selection-displayPos))
@@ -326,7 +448,7 @@ def makeTest(width=80, height=24):
 	print("ID,X,Y")
 
 	# Invoke list selector and store selection in "chosen" variable
-	chosen,rx,ry=choice(list,1,1,width,height,onSelection=test,returnCoordinatesToo=True)
+	chosen,rx,ry=choice(list,1,1,width,height,onSelection=test,returnCoordinatesToo=True,leftCharMod="[",rightCharMod="]",marginSize=2)
 
 	# Display selection ID
 	ansi.clear()
