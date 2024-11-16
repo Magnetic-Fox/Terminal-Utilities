@@ -117,10 +117,11 @@ def resetSelectionIndex(selection, list, listSize, up=True):
 # set passing and/or returning coordinates of left side of the selection (leftSideCoordinates),
 # set placing cursor at the left side of selection (placeCursorAtStart), cursor setting correction (cursorCorrection),
 # selected element index (startIndex), set returning coordinates too (returnCoordinatesToo),
-# set to redraw only the selected element and nothing else at start (firstRedrawStartIndexOnly).
+# set to redraw only the selected element and nothing else at start (firstRedrawStartIndexOnly),
+# set to override Ctrl-C behavior (overrideCtrlC).
 # ONLY FIRST FIVE PARAMETERS ARE REQUIRED (list, pos_x, pos_y, s_width and s_height), OTHERS ARE OPTIONAL.
 # IMPORTANT: Parameters for position on screen starts from 1 (not 0!)
-def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, leftCharMod='', rightCharMod='', onSelection=None, leftSideCoordinates=True, placeCursorAtStart=False, cursorCorrection=0, startIndex=0, returnCoordinatesToo=False, firstRedrawStartIndexOnly=False):
+def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, leftCharMod='', rightCharMod='', onSelection=None, leftSideCoordinates=True, placeCursorAtStart=False, cursorCorrection=0, startIndex=0, returnCoordinatesToo=False, firstRedrawStartIndexOnly=False, overrideCtrlC=False):
 	# Let's throw an exception yet at the beginning (if needed)
 	if list==None:
 		raise TypeError("list is None")
@@ -244,8 +245,14 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 				ansi.setCurPos(pos_x+(maxStrWidth if not placeCursorAtStart else 0)+cursorCorrection,pos_y+selection-displayPos)
 			# Flush standard output (which is VERY IMPORTANT!)
 			sys.stdout.flush()
-			# Read character from the standard input
-			inp=readchar.readkey()
+			# Try to read character from the standard input
+			try:
+				# Read character from the standard input
+				inp=readchar.readkey()
+			# Catch Ctrl-C if set to (otherwise let KeyboardInterrupt to be thrown by waiting for NotImplementedError exception instead)
+			except(KeyboardInterrupt if overrideCtrlC else NotImplementedError):
+				# Set read character to None to avoid errors below
+				inp=None
 			# Go up on the list (one element, 16 elements, get first element of the list)
 			if(inp==readchar.key.UP) or (inp==readchar.key.PAGE_UP) or (inp==readchar.key.HOME):
 				# Store old selection index
