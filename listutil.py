@@ -2,7 +2,7 @@
 
 # Simple terminal list selector utility
 #
-# by Magnetic-Fox, 03-05.07.2024, 18-21.07.2024, 12-15.11.2024
+# by Magnetic-Fox, 03-05.07.2024, 18-21.07.2024, 12-16.11.2024
 #
 # (C)2024 Bartłomiej "Magnetic-Fox" Węgrzyn!
 
@@ -10,6 +10,51 @@
 import readchar
 import ansi
 import sys
+
+# Helper function to shorten the list selector utility's code
+def printOut(lcm, rcm, leftCharMod, rightCharMod, maxStrWidth, list, selection):
+	# Load element to the temporary variable
+	tempString=list[selection]
+	# If modifying element's first character
+	if lcm:
+		# Print element's new first character
+		print(leftCharMod,end="")
+		# And cut element's first character
+		tempString=tempString[1:]
+	# If modifying element's last character and its width is at the maximum level
+	if rcm and maxStrWidth==len(list[selection]):
+		# Then cut element's last character
+		tempString=tempString[:-1]
+	# Print what's needed
+	print(tempString,end="")
+	# Fill element's empty part with spaces
+	print(" "*(maxStrWidth-len(list[selection])-(1 if rcm else 0)),end="")
+	# If modifying element's last character
+	if rcm:
+		# Print element's new last character
+		print(rightCharMod,end="")
+	return
+
+# Helper function for unselecting elements
+def unSelect(pos_x, pos_y, selection, displayPos, lcm, rcm, leftCharMod, rightCharMod, maxStrWidth, list):
+	# Unselect element
+	ansi.setNoReverse()
+	ansi.setCurPos(pos_x,pos_y+selection-displayPos)
+	printOut(lcm,rcm,leftCharMod,rightCharMod,maxStrWidth,list,selection)
+	return
+
+# Helper function for selecting elements and executing onSelection function
+def selectAndExecute(pos_x, pos_y, selection, displayPos, lcm, rcm, leftCharMod, rightCharMod, maxStrWidth, list, onSelection, adds, placeCursorAtStart, cursorCorrection):
+	# Select element
+	ansi.setCurPos(pos_x,pos_y+selection-displayPos)
+	ansi.setReverse()
+	printOut(lcm,rcm,leftCharMod,rightCharMod,maxStrWidth,list,selection)
+	ansi.setNoReverse()
+	# Execute onSelection function if needed
+	if(onSelection!=None):
+		onSelection(selection,pos_x+adds,pos_y+selection-displayPos)
+		ansi.setCurPos(pos_x+(maxStrWidth if not placeCursorAtStart else 0)+cursorCorrection,pos_y+selection-displayPos)
+	return
 
 # LIST SELECTOR UTILITY
 #
@@ -39,14 +84,18 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 	if list!=None:
 		list=list[:]
 
-	# Test if leftCharMod and rightCharMod are one character long strings
-	if (leftCharMod!=None and len(leftCharMod)>1) or (rightCharMod!=None and len(rightCharMod)>1):
-		selection=-1
-		list=None
-
-	# Let's shorten it
-	lcm=(leftCharMod!=None) and (len(leftCharMod)==1)
-	rcm=(rightCharMod!=None) and (len(rightCharMod)==1)
+	# Test if leftCharMod is one character long
+	if leftCharMod!=None and len(leftCharMod)>1:
+		# Throw exception
+		raise ValueError("leftCharMod has to be one-character string")
+	# Test if rightCharMod is one character long
+	elif rightCharMod!=None and len(rightCharMod)>1:
+		# Throw exception
+		raise ValueError("rightCharMod had to be one-character string")
+	else:
+		# Let's shorten it
+		lcm=(leftCharMod!=None) and (len(leftCharMod)==1)
+		rcm=(rightCharMod!=None) and (len(rightCharMod)==1)
 
 	# Set the real start index on existing list if selection points to the None
 	if (list!=None) and (selection<len(list)) and (selection>=0):
@@ -100,9 +149,9 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 				list[x]=list[x][0:s_width-subt]
 				list[x]+="..."+" "*marginSize
 
-		# Set to terminate selector and return error (None-only list)
+		# Throw exception (None-only list)
 		if allNone:
-			selection=-1
+			raise ValueError("list contains None elements only")
 
 		# Set how much to add to the output coordinates in "on selection" event
 		if not leftSideCoordinates:
@@ -131,31 +180,7 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 							ansi.setReverse()
 						if(pos_x>1):
 							ansi.setCurPos(pos_x,pos_y+x)
-						# If modifying element's first character
-						if lcm:
-							# Modify element's first character
-							print(leftCharMod,end="")
-							if rcm and (maxStrWidth-len(list[displayPos+x])==0):
-								# Cut first character and modify element's last character
-								# immediately if string length is equal to the maximum width
-								print(list[displayPos+x][1:-1],end="")
-							else:
-								# Just cut first character
-								print(list[displayPos+x][1:],end="")
-						# If not modifying element's first character
-						else:
-							if rcm and (maxStrWidth-len(list[displayPos+x])==0):
-								# Modify element's last character immediately if string length
-								# is equal to the maximum width
-								print(list[displayPos+x][:-1],end="")
-							else:
-								# Print element normally
-								print(list[displayPos+x],end="")
-						# Fill element's empty part with spaces
-						print(" "*(maxStrWidth-len(list[displayPos+x])-(1 if rcm else 0)),end="")
-						# If modifying element's last character
-						if rcm:
-							print(rightCharMod,end="")
+						printOut(lcm,rcm,leftCharMod,rightCharMod,maxStrWidth,list,displayPos+x)
 						if x!=s_height-1:
 							# Go to the next line
 							print("")
@@ -228,59 +253,9 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 				# Unselect previously selected element and select currently selected
 				else:
 					if(oldSelection<listSize) and (s_height>1):
-						ansi.setNoReverse()
-						ansi.setCurPos(pos_x,pos_y+(oldSelection-displayPos))
-						# If modifying element's first character
-						if lcm:
-							print(leftCharMod,end="")
-							if rcm and (maxStrWidth-len(list[oldSelection])==0):
-								# Cut first and last character (like before)
-								print(list[oldSelection][1:-1],end="")
-							else:
-								# Cut first character only
-								print(list[oldSelection][1:],end="")
-						# If not modifying element's first character
-						else:
-							if rcm and (maxStrWidth-len(list[oldSelection])==0):
-								# Cut last character only (like before)
-								print(list[oldSelection][:-1],end="")
-							else:
-								# Print normally
-								print(list[oldSelection],end="")
-						# Fill with spaces (like before)
-						print(" "*(maxStrWidth-len(list[oldSelection])-(1 if rcm else 0)),end="")
-						if rcm:
-							# Change element's last character
-							print(rightCharMod,end="")
+						unSelect(pos_x,pos_y,oldSelection,displayPos,lcm,rcm,leftCharMod,rightCharMod,maxStrWidth,list)
 					if(selection-displayPos>=0):
-						ansi.setCurPos(pos_x,pos_y+(selection-displayPos))
-						ansi.setReverse()
-						# If modifying element's first character
-						if lcm:
-							print(leftCharMod,end="")
-							if rcm and (maxStrWidth-len(list[selection])==0):
-								# Cut first and last character (like before)
-								print(list[selection][1:-1],end="")
-							else:
-								# Cut first character only (like before)
-								print(list[selection][1:],end="")
-						# If not modifying element's first character
-						else:
-							if rcm and (maxStrWidth-len(list[selection])==0):
-								# Cut last character (like before)
-								print(list[selection][:-1],end="")
-							else:
-								# Print normally
-								print(list[selection],end="")
-						# Fill with spaces (like before)
-						print(" "*(maxStrWidth-len(list[selection])-(1 if rcm else 0)),end="")
-						if rcm:
-							# Change element's last character
-							print(rightCharMod,end="")
-						ansi.setNoReverse()
-						if(onSelection!=None):
-							onSelection(selection,pos_x+adds,pos_y+(selection-displayPos))
-							ansi.setCurPos(pos_x+(maxStrWidth if not placeCursorAtStart else 0)+cursorCorrection,pos_y+(selection-displayPos))
+						selectAndExecute(pos_x,pos_y,selection,displayPos,lcm,rcm,leftCharMod,rightCharMod,maxStrWidth,list,onSelection,adds,placeCursorAtStart,cursorCorrection)
 
 			# Go down on the list (one element, 16 elements, get end of the list)
 			elif(inp==readchar.key.DOWN) or (inp==readchar.key.PAGE_DOWN) or (inp==readchar.key.END):
@@ -335,73 +310,27 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 				# Unselect previously selected element and select currently selected
 				else:
 					if(oldSelection>=0) and (pos_y+(oldSelection-displayPos)>=pos_y):
-						ansi.setNoReverse()
-						ansi.setCurPos(pos_x,pos_y+(oldSelection-displayPos))
-						# If modifying element's first character
-						if lcm:
-							print(leftCharMod,end="")
-							if rcm and (maxStrWidth-len(list[oldSelection])==0):
-								# Cut first and last character (like before)
-								print(list[oldSelection][1:-1],end="")
-							else:
-								# Cut first character only (like before)
-								print(list[oldSelection][1:],end="")
-						# If not modifying element's first character
-						else:
-							if rcm and (maxStrWidth-len(list[oldSelection])==0):
-								# Cut last character (like before)
-								print(list[oldSelection][:-1],end="")
-							else:
-								# Print normally
-								print(list[oldSelection],end="")
-						# Fill with spaces (like before)
-						print(" "*(maxStrWidth-len(list[oldSelection])-(1 if rcm else 0)),end="")
-						if rcm:
-							# Modify element's last character
-							print(rightCharMod,end="")
+						unSelect(pos_x,pos_y,oldSelection,displayPos,lcm,rcm,leftCharMod,rightCharMod,maxStrWidth,list)
 					if(selection-displayPos<s_height):
-						ansi.setCurPos(pos_x,pos_y+(selection-displayPos))
-						ansi.setReverse()
-						# If modifying element's first character
-						if lcm:
-							print(leftCharMod,end="")
-							if rcm and (maxStrWidth-len(list[selection])==0):
-								# Cut first and last character (like before)
-								print(list[selection][1:-1],end="")
-							else:
-								# Cut first character only (like before)
-								print(list[selection][1:],end="")
-						# If not modifying element's first character
-						else:
-							if rcm and (maxStrWidth-len(list[selection])==0):
-								# Cut last character (like before)
-								print(list[selection][:-1],end="")
-							else:
-								# Print normally
-								print(list[selection],end="")
-						# Fill with spaces (like before)
-						print(" "*(maxStrWidth-len(list[selection])-(1 if rcm else 0)),end="")
-						if rcm:
-							# Modify element's last character
-							print(rightCharMod,end="")
-						ansi.setNoReverse()
-						if(onSelection!=None):
-							onSelection(selection,pos_x+adds,pos_y+(selection-displayPos))
-							ansi.setCurPos(pos_x+(maxStrWidth if not placeCursorAtStart else 0)+cursorCorrection,pos_y+(selection-displayPos))
+						selectAndExecute(pos_x,pos_y,selection,displayPos,lcm,rcm,leftCharMod,rightCharMod,maxStrWidth,list,onSelection,adds,placeCursorAtStart,cursorCorrection)
 
 			# Break list selector (selection index is already set)
 			elif(inp==readchar.key.ENTER):
 				break
 
-	# Set error if list has no elements or does not exist (got None)
+	# An error occurred - throw appropriate exception
 	else:
-		selection=-1
+		if list==None:
+			raise TypeError("list is None")
+		elif len(list)==0:
+			raise ValueError("list is empty")
+		else:
+			raise RuntimeError("unknown error occurred")
 
-	# Return selection or error (and coordinates, if chosen to)
+	# Return selection or throw exception
 	if returnCoordinatesToo:
 		if selection<0:
-			# Return 0, 0 coordinates (wrong, in fact) on error
-			return selection, 0, 0
+			raise ValueError("selection error occurred")
 		return selection, pos_x+adds, pos_y+selection-displayPos
 	return selection
 
