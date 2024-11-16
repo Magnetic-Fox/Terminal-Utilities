@@ -116,12 +116,12 @@ def resetSelectionIndex(selection, list, listSize, up=True):
 # character to change on the right side of the element (rightCharMod), function to invoke on selection change (onSelection),
 # set passing and/or returning coordinates of left side of the selection (leftSideCoordinates),
 # set placing cursor at the left side of selection (placeCursorAtStart), cursor setting correction (cursorCorrection),
-# selected element index (startIndex), set returning coordinates too (returnCoordinatesToo).
+# selected element index (startIndex), set returning coordinates too (returnCoordinatesToo),
+# set to redraw only the selected element and nothing else at start (firstRedrawStartIndexOnly).
 # ONLY FIRST FIVE PARAMETERS ARE REQUIRED (list, pos_x, pos_y, s_width and s_height), OTHERS ARE OPTIONAL.
-#
-# IMPORTANT: Variables for position on screen starts from 1 (not 0!)
+# IMPORTANT: Parameters for position on screen starts from 1 (not 0!)
 def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, leftCharMod='', rightCharMod='', onSelection=None, leftSideCoordinates=True, placeCursorAtStart=False, cursorCorrection=0, startIndex=0, returnCoordinatesToo=False, firstRedrawStartIndexOnly=False):
-	# Let's thrown an exception yet at the beginning (if needed)
+	# Let's throw an exception yet at the beginning (if needed)
 	if list==None:
 		raise TypeError("list is None")
 	# Define temporary variables and initialize them
