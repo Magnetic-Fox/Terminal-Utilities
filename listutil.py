@@ -11,6 +11,13 @@ import readchar
 import ansi
 import sys
 
+
+
+# HELPER FUNCTIONS SECTION
+# Below are helper functions to make list selector utility's code shorter and better
+
+# --------------------------------------------------------------------------------------------
+
 # Helper function to shorten the list selector utility's code
 def printOut(lcm, rcm, leftCharMod, rightCharMod, maxStrWidth, list, selection):
 	# Load element to the temporary variable
@@ -43,8 +50,45 @@ def unSelect(pos_x, pos_y, selection, displayPos, lcm, rcm, leftCharMod, rightCh
 	printOut(lcm,rcm,leftCharMod,rightCharMod,maxStrWidth,list,selection)
 	return
 
+# Helper function for executing onSelection or onOtherKey function and placing cursor at proper location
+def executeEventAndResetCursor(	pos_x,
+				pos_y,
+				adds,
+				selection,
+				displayPos,
+				maxStrWidth,
+				placeCursorAtStart,
+				cursorCorrection,
+				onSelection=None,
+				onOtherKey=None,
+				inp=None):
+	# If not None, execute onSelection event function
+	if onSelection!=None:
+		onSelection(selection,pos_x+adds,pos_y+selection-displayPos,displayPos)
+	# If not None, execute onOtherKey event function
+	if onOtherKey!=None:
+		onOtherKey(inp,selection,pos_x+adds,pos_y+selection-displayPos,displayPos)
+	# If one of those function wasn't None, reset cursor position (function was executed before)
+	if (onSelection!=None) or (onOtherKey!=None):
+		ansi.setCurPos(pos_x+(maxStrWidth if not placeCursorAtStart else 0)+cursorCorrection,pos_y+selection-displayPos)
+	# Finish
+	return
+
 # Helper function for selecting elements and executing onSelection function
-def selectAndExecute(pos_x, pos_y, selection, displayPos, lcm, rcm, leftCharMod, rightCharMod, maxStrWidth, list, onSelection, adds, placeCursorAtStart, cursorCorrection):
+def selectAndExecute(	pos_x,
+			pos_y,
+			selection,
+			displayPos,
+			lcm,
+			rcm,
+			leftCharMod,
+			rightCharMod,
+			maxStrWidth,
+			list,
+			onSelection,
+			adds,
+			placeCursorAtStart,
+			cursorCorrection):
 	# Select element
 	ansi.setCurPos(pos_x,pos_y+selection-displayPos)
 	ansi.setReverse()
@@ -52,8 +96,7 @@ def selectAndExecute(pos_x, pos_y, selection, displayPos, lcm, rcm, leftCharMod,
 	ansi.setNoReverse()
 	# Execute onSelection function if needed
 	if(onSelection!=None):
-		onSelection(selection,pos_x+adds,pos_y+selection-displayPos,displayPos)
-		ansi.setCurPos(pos_x+(maxStrWidth if not placeCursorAtStart else 0)+cursorCorrection,pos_y+selection-displayPos)
+		executeEventAndResetCursor(pos_x,pos_y,adds,selection,displayPos,maxStrWidth,placeCursorAtStart,cursorCorrection,onSelection=onSelection)
 	return
 
 # Helper function to calculate proper display position
@@ -108,6 +151,13 @@ def resetSelectionIndex(selection, list, listSize, up=True):
 	# Return reset selection index
 	return selection
 
+
+
+# END HELPER FUNCTIONS SECTION
+# Below is the main code
+
+# --------------------------------------------------------------------------------------------
+
 # LIST SELECTOR UTILITY
 #
 # ARGUMENTS ARE AS FOLLOWS: list variable (list), x position of list on screen (pos_x),
@@ -118,10 +168,29 @@ def resetSelectionIndex(selection, list, listSize, up=True):
 # set placing cursor at the left side of selection (placeCursorAtStart), cursor setting correction (cursorCorrection),
 # selected element index (startIndex), set returning coordinates too (returnCoordinatesToo),
 # set to redraw only the selected element and nothing else at start (firstRedrawStartIndexOnly),
-# set to override Ctrl-C behavior (overrideCtrlC), initial display position (first element printed; initialDisplayPos).
+# set to override Ctrl-C behavior (overrideCtrlC), initial display position (first element printed; initialDisplayPos),
+# function to invoke on other key pressed (onOtherKey).
 # ONLY FIRST FIVE PARAMETERS ARE REQUIRED (list, pos_x, pos_y, s_width and s_height), OTHERS ARE OPTIONAL.
 # IMPORTANT: Parameters for position on screen starts from 1 (not 0!)
-def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, leftCharMod='', rightCharMod='', onSelection=None, leftSideCoordinates=True, placeCursorAtStart=False, cursorCorrection=0, startIndex=0, returnCoordinatesToo=False, firstRedrawStartIndexOnly=False, overrideCtrlC=False, initialDisplayPos=0):
+def choice(	list,
+		pos_x,
+		pos_y,
+		s_width,
+		s_height,
+		addMargins=True,
+		marginSize=1,
+		leftCharMod='',
+		rightCharMod='',
+		onSelection=None,
+		leftSideCoordinates=True,
+		placeCursorAtStart=False,
+		cursorCorrection=0,
+		startIndex=0,
+		returnCoordinatesToo=False,
+		firstRedrawStartIndexOnly=False,
+		overrideCtrlC=False,
+		initialDisplayPos=0,
+		onOtherKey=None):
 	# Let's throw an exception yet at the beginning (if needed)
 	if list==None:
 		raise TypeError("list is None")
@@ -330,6 +399,8 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 			# Break list selector (selection index is already set)
 			elif(inp==readchar.key.ENTER):
 				break
+			elif(onOtherKey!=None):
+				executeEventAndResetCursor(pos_x,pos_y,adds,selection,displayPos,maxStrWidth,placeCursorAtStart,cursorCorrection,onOtherKey=onOtherKey,inp=inp)
 	# An error occurred - throw appropriate exception
 	else:
 		if list==None:
@@ -360,6 +431,14 @@ def test(in1,in2,in3,in4):
 	print(str(in1)+","+str(in2)+","+str(in3)+","+str(in4)+" "*10)
 	return
 
+# EXAMPLE ON-OTHER-KEY EVENT FUNCTION
+# Input variables as follows: pressed key, chosen ID, X and Y coordinates of selection
+# (left or right side) and display position variable
+def test2(in1,in2,in3,in4,in5):
+	ansi.setCurPos(30,5)
+	print(str(in1)+","+str(in2)+","+str(in3)+","+str(in4)+","+str(in5)+" "*10)
+	return
+
 # EXAMPLE/TEST INVOKING FUNCTION
 # Input variables can be used to override width and height to be used on terminal
 def makeTest(width=80, height=24):
@@ -379,11 +458,14 @@ def makeTest(width=80, height=24):
 	# Prepare output terminal
 	ansi.clear()
 	ansi.setNoWrapAround()
-	ansi.setCurPos(30,1)
 	# Make some header
+	ansi.setCurPos(30,1)
 	print("ID,X,Y,DP")
+	# Make another header
+	ansi.setCurPos(30,4)
+	print("Key,ID,X,Y,DP")
 	# Invoke list selector and store selection in "chosen" variable
-	chosen,rx,ry,dp=choice(list,1,1,width,height,onSelection=test,returnCoordinatesToo=True,leftCharMod="[",rightCharMod="]",marginSize=2)
+	chosen,rx,ry,dp=choice(list,1,1,width,height,onSelection=test,returnCoordinatesToo=True,leftCharMod="[",rightCharMod="]",marginSize=2,onOtherKey=test2)
 	# Display selection ID
 	ansi.clear()
 	ansi.setCurPos(1,1)
@@ -398,4 +480,10 @@ def makeTest(width=80, height=24):
 
 # AUTORUN PART / EXAMPLE MODE
 if __name__ == "__main__":
-	makeTest()
+	width=80
+	height=24
+	if len(sys.argv)>=2:
+		width=int(sys.argv[1])
+	if len(sys.argv)>=3:
+		height=int(sys.argv[2])
+	makeTest(width,height)
