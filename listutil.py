@@ -2,7 +2,7 @@
 
 # Simple terminal list selector utility
 #
-# by Magnetic-Fox, 03-05.07.2024, 18-21.07.2024, 12-16.11.2024
+# by Magnetic-Fox, 03-05.07.2024, 18-21.07.2024, 12-17.11.2024
 #
 # (C)2024 Bartłomiej "Magnetic-Fox" Węgrzyn!
 
@@ -52,7 +52,7 @@ def selectAndExecute(pos_x, pos_y, selection, displayPos, lcm, rcm, leftCharMod,
 	ansi.setNoReverse()
 	# Execute onSelection function if needed
 	if(onSelection!=None):
-		onSelection(selection,pos_x+adds,pos_y+selection-displayPos)
+		onSelection(selection,pos_x+adds,pos_y+selection-displayPos,displayPos)
 		ansi.setCurPos(pos_x+(maxStrWidth if not placeCursorAtStart else 0)+cursorCorrection,pos_y+selection-displayPos)
 	return
 
@@ -118,10 +118,10 @@ def resetSelectionIndex(selection, list, listSize, up=True):
 # set placing cursor at the left side of selection (placeCursorAtStart), cursor setting correction (cursorCorrection),
 # selected element index (startIndex), set returning coordinates too (returnCoordinatesToo),
 # set to redraw only the selected element and nothing else at start (firstRedrawStartIndexOnly),
-# set to override Ctrl-C behavior (overrideCtrlC).
+# set to override Ctrl-C behavior (overrideCtrlC), initial display position (first element printed; initialDisplayPos).
 # ONLY FIRST FIVE PARAMETERS ARE REQUIRED (list, pos_x, pos_y, s_width and s_height), OTHERS ARE OPTIONAL.
 # IMPORTANT: Parameters for position on screen starts from 1 (not 0!)
-def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, leftCharMod='', rightCharMod='', onSelection=None, leftSideCoordinates=True, placeCursorAtStart=False, cursorCorrection=0, startIndex=0, returnCoordinatesToo=False, firstRedrawStartIndexOnly=False, overrideCtrlC=False):
+def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1, leftCharMod='', rightCharMod='', onSelection=None, leftSideCoordinates=True, placeCursorAtStart=False, cursorCorrection=0, startIndex=0, returnCoordinatesToo=False, firstRedrawStartIndexOnly=False, overrideCtrlC=False, initialDisplayPos=0):
 	# Let's throw an exception yet at the beginning (if needed)
 	if list==None:
 		raise TypeError("list is None")
@@ -130,7 +130,7 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 	s_height-=pos_y-1
 	maxStrWidth=0
 	selection=startIndex
-	displayPos=0
+	displayPos=initialDisplayPos
 	adds=0
 	redrawAll=True
 	reset=False
@@ -211,7 +211,7 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 							continue
 						else:
 							ansi.setCurPos(pos_x,pos_y+x)
-					if x==listSize:
+					if x==listSize or displayPos+x==listSize:
 						break
 					else:
 						if list[displayPos+x]==None:
@@ -234,7 +234,7 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 							ansi.setNoReverse()
 							# Invoke "on selection" event
 							if(onSelection!=None):
-								onSelection(selection,pos_x+adds,pos_y+x)
+								onSelection(selection,pos_x+adds,pos_y+x,displayPos)
 								ansi.setCurPos(pos_x,pos_y+x+1)
 							if once:
 								once=False
@@ -342,7 +342,7 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 	if returnCoordinatesToo:
 		if selection<0:
 			raise ValueError("selection error occurred")
-		return selection, pos_x+adds, pos_y+selection-displayPos
+		return selection, pos_x+adds, pos_y+selection-displayPos, displayPos
 	return selection
 
 
@@ -354,9 +354,10 @@ def choice(list, pos_x, pos_y, s_width, s_height, addMargins=True, marginSize=1,
 
 # EXAMPLE ON-SELECTION EVENT FUNCTION
 # Input variables as follows: chosen ID, X and Y coordinates of selection (left or right side)
-def test(in1,in2,in3):
+# and display position variable
+def test(in1,in2,in3,in4):
 	ansi.setCurPos(30,2)
-	print(str(in1)+","+str(in2)+","+str(in3)+" "*10)
+	print(str(in1)+","+str(in2)+","+str(in3)+","+str(in4)+" "*10)
 	return
 
 # EXAMPLE/TEST INVOKING FUNCTION
@@ -380,15 +381,16 @@ def makeTest(width=80, height=24):
 	ansi.setNoWrapAround()
 	ansi.setCurPos(30,1)
 	# Make some header
-	print("ID,X,Y")
+	print("ID,X,Y,DP")
 	# Invoke list selector and store selection in "chosen" variable
-	chosen,rx,ry=choice(list,1,1,width,height,onSelection=test,returnCoordinatesToo=True,leftCharMod="[",rightCharMod="]",marginSize=2)
+	chosen,rx,ry,dp=choice(list,1,1,width,height,onSelection=test,returnCoordinatesToo=True,leftCharMod="[",rightCharMod="]",marginSize=2)
 	# Display selection ID
 	ansi.clear()
 	ansi.setCurPos(1,1)
 	print("ID:   "+str(chosen))
 	print("X:    "+str(rx))
 	print("Y:    "+str(ry))
+	print("DP:   "+str(dp))
 	# Set wrap around, as probably was before running test
 	ansi.setWrapAround()
 	# Finish
