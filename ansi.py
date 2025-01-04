@@ -1,14 +1,29 @@
 #!/usr/bin/env python3
 
 # Very simple (most used) ANSI escape codes implementation
-# by Magnetic-Fox, 28.04.2024, 02-04.05.2024, 30.06.2024, 05-20.07.2024
+# by Magnetic-Fox, 28.04-20.07.2024, 04.01.2025
 #
-# (C)2024 Bartłomiej "Magnetic-Fox" Węgrzyn!
+# (C)2024-2025 Bartłomiej "Magnetic-Fox" Węgrzyn!
 
 import sys
 
 # Global variable for using HyperTerminal convention of interpreting colors
 hyperColors=False
+
+# State variables
+fgColor=None
+bgColor=None
+fgColorT=True
+bgColorT=True
+lockFgColorT=False
+bold=None
+underline=None
+reverse=None
+blinking=None
+
+# Helper function - simple none relay to shorten code
+def noneStringRelay(input):
+	return input if input!=None else ""
 
 # Encoding and decoding code pages configuration
 def configureEncodings(inputEnc=None, outputEnc=None):
@@ -77,16 +92,26 @@ def ESC():
 	return "\x1b"
 
 # Simplest version of setting foreground color (0-7, 60-67)
-def setFgColor(input, ret=False):
+def setFgColor(input, ret=False, noSet=False):
+	global fgColor, fgColorT
+	if not noSet:
+		fgColor=input
+		fgColorT=False
 	return output(CSI()+str(30+input)+"m",ret)
 
 # Simplest version of setting background color (0-7, 60-67)
-def setBgColor(input, ret=False):
-	return setFgColor(10+input,ret)
+def setBgColor(input, ret=False, noSet=False):
+	global bgColor, bgColorT
+	if not noSet:
+		bgColor=input
+		bgColorT=False
+	return setFgColor(10+input,ret,True)
 
 # Set foreground color with translation (color codes 0-15)
 def setFgColorT(color, ret=False):
-	global hyperColors
+	global hyperColors, fgColor, fgColorT, lockFgColorT
+	fgColor=color
+	fgColorT=True
 	part=None
 	if(color>7):
 		if(hyperColors):
@@ -95,29 +120,68 @@ def setFgColorT(color, ret=False):
 		else:
 			color+=52		# + 60 - 8
 	elif(hyperColors):
-		part=setNoBold(ret)
+		if not lockFgColorT:
+			lockFgColorT=True
+			part=setNoBold(ret)
+			lockFgColorT=False
 	if part==None:
-		return setFgColor(color,ret)
+		return setFgColor(color,ret,True)
 	else:
-		return part+setFgColor(color,ret)
+		return part+setFgColor(color,ret,True)
 
 # Set background color with translation (color codes 0-15)
 def setBgColorT(color, ret=False):
-	global hyperColors
+	global hyperColors, bgColor, bgColorT
+	bgColor=color
+	bgColorT=True
 	if(color>7):
 		if(hyperColors):
 			color-=8	# There aren't any trick for that, unfortunatelly
 		else:
 			color+=52	# + 60 - 8
-	return setBgColor(color,ret)
+	return setBgColor(color,ret,True)
 
 # Set cursor position
 def setCurPos(x, y, ret=False):
 	return output(CSI()+str(y)+";"+str(x)+"H",ret)
 
-# Reset terminal
-def reset(ret=False):
+# Reset terminal font's settings
+def reset(ret=False, resetStates=True):
+	global fgColor, bgColor, fgColorT, bgColorT, bold, underline, reverse, blinking
+	if resetStates:
+		fgColor=None
+		bgColor=None
+		fgColorT=True
+		bgColorT=True
+		bold=None
+		underline=None
+		reverse=None
+		blinking=None
 	return output(CSI()+"0m",ret)
+
+# Restore saved font states
+def restoreStates(ret=False):
+	global fgColor, bgColor, fgColorT, bgColorT, bold, underline, reverse, blinking
+	tempOutput=""
+	if fgColor!=None:
+		if fgColorT:
+			tempOutput+=noneStringRelay(setFgColorT(fgColor,ret))
+		else:
+			tempOutput+=noneStringRelay(setFgColor(fgColor,ret))
+	if bgColor!=None:
+		if bgColorT:
+			tempOutput+=noneStringRelay(setBgColorT(bgColor,ret))
+		else:
+			tempOutput+=noneStringRelay(setBgColor(bgColor,ret))
+	if bold!=None and bold:
+		tempOutput+=noneStringRelay(setBold(ret))
+	if underline!=None and underline:
+		tempOutput+=noneStringRelay(setUnderline(ret))
+	if reverse!=None and reverse:
+		tempOutput+=noneStringRelay(setReverse(ret))
+	if blinking!=None and blinking:
+		tempOutput+=noneStringRelay(setBlinking(ret))
+	return output(tempOutput,ret)
 
 # Clear terminal's screen
 def clear(ret=False):
@@ -127,36 +191,84 @@ def clear(ret=False):
 		return out+out2
 	return
 
+# Reset and restore states
+def resetAndRestoreStates(ret=False):
+	out=reset(ret,False)
+	out2=restoreStates(ret)
+	if(ret):
+		return out+out2
+	return
+
 # Set bold text
 def setBold(ret=False):
+	global bold
+	bold=True
 	return output(CSI()+"1m",ret)
 
-# Set no bold text
+# Set no bold text (classic way)
 def setNoBold(ret=False):
+	global bold
+	bold=False
+	return resetAndRestoreStates(ret)
+
+# Set no bold text (modern way)
+def setNoBold_modern(ret=False):
+	global bold
+	bold=False
 	return output(CSI()+"22m",ret)
 
 # Set underlined text
 def setUnderline(ret=False):
+	global underline
+	underline=True
 	return output(CSI()+"4m",ret)
 
-# Set no underlined text
+# Set no underlined text (classic way)
 def setNoUnderline(ret=False):
+	global underline
+	underline=False
+	return resetAndRestoreStates(ret)
+
+# Set no underlined text (modern way)
+def setNoUnderline_modern(ret=False):
+	global underline
+	underline=False
 	return output(CSI()+"24m",ret)
 
 # Set reverse video
 def setReverse(ret=False):
+	global reverse
+	reverse=True
 	return output(CSI()+"7m",ret)
 
-# Set no reverse video
+# Set no reverse video (classic way)
 def setNoReverse(ret=False):
+	global reverse
+	reverse=False
+	return resetAndRestoreStates(ret)
+
+# Set no reverse video (modern way)
+def setNoReverse_modern(ret=False):
+	global reverse
+	reverse=False
 	return output(CSI()+"27m",ret)
 
 # Set blinking text
 def setBlinking(ret=False):
+	global blinking
+	blinking=True
 	return output(CSI()+"5m",ret)
 
-# Set no blinking text
+# Set no blinking text (classic way)
 def setNoBlinking(ret=False):
+	global blinking
+	blinking=False
+	return resetAndRestoreStates(ret)
+
+# Set no blinking text (modern way)
+def setNoBlinking_modern(ret=False):
+	global blinking
+	blinking=False
 	return output(CSI()+"25m",ret)
 
 # Set automatic line wrap after exceeding line
